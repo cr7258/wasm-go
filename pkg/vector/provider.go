@@ -51,6 +51,11 @@ type EmbeddingQuerier interface {
 		emb []float64,
 		ctx wrapper.HttpContext,
 		callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error
+
+	QueryEmbeddingWithoutParseBody(
+		emb []float64,
+		ctx wrapper.HttpContext,
+		callback func(responseBody []byte, ctx wrapper.HttpContext, err error)) error
 }
 
 type EmbeddingUploader interface {

@@ -91,6 +91,11 @@ func (d *ChromaProvider) QueryEmbedding(
 	)
 }
 
+func (d *ChromaProvider) QueryEmbeddingWithoutParseBody(emb []float64, ctx wrapper.HttpContext, callback func(responseBody []byte, ctx wrapper.HttpContext, err error)) error {
+	// TODO
+	panic("implement me")
+}
+
 func (d *ChromaProvider) UploadAnswerAndEmbedding(
 	queryString string,
 	queryEmb []float64,

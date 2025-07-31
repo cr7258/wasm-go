@@ -82,6 +82,37 @@ func (d *ESProvider) QueryEmbedding(
 	)
 }
 
+func (d *ESProvider) QueryEmbeddingWithoutParseBody(emb []float64, ctx wrapper.HttpContext, callback func(responseBody []byte, ctx wrapper.HttpContext, err error)) error {
+	requestBody, err := json.Marshal(esQueryRequest{
+		Source: Source{Excludes: []string{"embedding"}},
+		Knn: knn{
+			Field:       "embedding",
+			QueryVector: emb,
+			K:           d.config.topK,
+		},
+		Size: d.config.topK,
+	})
+
+	if err != nil {
+		log.Errorf("[ES] Failed to marshal query embedding request body: %v", err)
+		return err
+	}
+
+	return d.client.Post(
+		fmt.Sprintf("/%s/_search", d.config.collectionID),
+		[][2]string{
+			{"Content-Type", "application/json"},
+			{"Authorization", d.getCredentials()},
+		},
+		requestBody,
+		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
+			log.Debugf("[ES] Query embedding response: %d, %s", statusCode, responseBody)
+			callback(responseBody, ctx, err)
+		},
+		d.config.timeout,
+	)
+}
+
 // base64 编码 ES 身份认证字符串或使用 Apikey
 func (d *ESProvider) getCredentials() string {
 	if len(d.config.apiKey) != 0 {
