@@ -68,8 +68,7 @@ func (d *pineconeProvider) UploadAnswerAndEmbedding(
 	queryEmb []float64,
 	queryAnswer string,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 vector 和 question
 	// 下面是一个例子
 	// {
@@ -106,7 +105,7 @@ func (d *pineconeProvider) UploadAnswerAndEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Pinecone] statusCode:%d, responseBody:%s", statusCode, string(responseBody))
-			callback(ctx, log, err)
+			callback(ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -123,8 +122,7 @@ type pineconeQueryRequest struct {
 func (d *pineconeProvider) QueryEmbedding(
 	emb []float64,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(results []QueryResult, ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 vector
 	// 下面是一个例子
 	// {
@@ -154,17 +152,17 @@ func (d *pineconeProvider) QueryEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Pinecone] Query embedding response: %d, %s", statusCode, responseBody)
-			results, err := d.parseQueryResponse(responseBody, log)
+			results, err := d.parseQueryResponse(responseBody)
 			if err != nil {
 				err = fmt.Errorf("[Pinecone] Failed to parse query response: %v", err)
 			}
-			callback(results, ctx, log, err)
+			callback(results, ctx, err)
 		},
 		d.config.timeout,
 	)
 }
 
-func (d *pineconeProvider) parseQueryResponse(responseBody []byte, log log.Log) ([]QueryResult, error) {
+func (d *pineconeProvider) parseQueryResponse(responseBody []byte) ([]QueryResult, error) {
 	if !gjson.GetBytes(responseBody, "matches.0.score").Exists() {
 		log.Errorf("[Pinecone] No distance found in response body: %s", responseBody)
 		return nil, errors.New("[Pinecone] No distance found in response body")

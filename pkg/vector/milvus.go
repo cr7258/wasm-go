@@ -59,8 +59,7 @@ func (d *milvusProvider) UploadAnswerAndEmbedding(
 	queryEmb []float64,
 	queryAnswer string,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 collectionName, data 和 Authorization. question, answer 可选
 	// 需要填写 id，否则 v2.4.13-hotfix 提示 invalid syntax: invalid parameter[expected=Int64][actual=]
 	// 如果不填写 id，要在创建 collection 的时候设置 autoId 为 true
@@ -104,7 +103,7 @@ func (d *milvusProvider) UploadAnswerAndEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Milvus] statusCode:%d, responseBody:%s", statusCode, string(responseBody))
-			callback(ctx, log, err)
+			callback(ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -121,8 +120,7 @@ type milvusQueryRequest struct {
 func (d *milvusProvider) QueryEmbedding(
 	emb []float64,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(results []QueryResult, ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 collectionName, data, annsField. outputFields 为可选参数
 	// 下面是一个例子
 	// {
@@ -166,17 +164,17 @@ func (d *milvusProvider) QueryEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Milvus] Query embedding response: %d, %s", statusCode, responseBody)
-			results, err := d.parseQueryResponse(responseBody, log)
+			results, err := d.parseQueryResponse(responseBody)
 			if err != nil {
 				err = fmt.Errorf("[Milvus] Failed to parse query response: %v", err)
 			}
-			callback(results, ctx, log, err)
+			callback(results, ctx, err)
 		},
 		d.config.timeout,
 	)
 }
 
-func (d *milvusProvider) parseQueryResponse(responseBody []byte, log log.Log) ([]QueryResult, error) {
+func (d *milvusProvider) parseQueryResponse(responseBody []byte) ([]QueryResult, error) {
 	if !gjson.GetBytes(responseBody, "data.0.distance").Exists() {
 		log.Errorf("[Milvus] No distance found in response body: %s", responseBody)
 		return nil, errors.New("[Milvus] No distance found in response body")

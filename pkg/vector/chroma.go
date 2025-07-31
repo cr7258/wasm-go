@@ -45,8 +45,7 @@ func (c *ChromaProvider) GetProviderType() string {
 func (d *ChromaProvider) QueryEmbedding(
 	emb []float64,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(results []QueryResult, ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 collection_id, embeddings 和 ids
 	// 下面是一个例子
 	// {
@@ -82,11 +81,11 @@ func (d *ChromaProvider) QueryEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Chroma] Query embedding response: %d, %s", statusCode, responseBody)
-			results, err := d.parseQueryResponse(responseBody, log)
+			results, err := d.parseQueryResponse(responseBody)
 			if err != nil {
 				err = fmt.Errorf("[Chroma] Failed to parse query response: %v", err)
 			}
-			callback(results, ctx, log, err)
+			callback(results, ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -97,8 +96,7 @@ func (d *ChromaProvider) UploadAnswerAndEmbedding(
 	queryEmb []float64,
 	queryAnswer string,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 collection_id, embeddings 和 ids
 	// 下面是一个例子
 	// {
@@ -143,7 +141,7 @@ func (d *ChromaProvider) UploadAnswerAndEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Chroma] statusCode:%d, responseBody:%s", statusCode, string(responseBody))
-			callback(ctx, log, err)
+			callback(ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -178,7 +176,7 @@ type chromaQueryResponse struct {
 	Included   []string            `json:"included"`
 }
 
-func (d *ChromaProvider) parseQueryResponse(responseBody []byte, log log.Log) ([]QueryResult, error) {
+func (d *ChromaProvider) parseQueryResponse(responseBody []byte) ([]QueryResult, error) {
 	var queryResp chromaQueryResponse
 	err := json.Unmarshal(responseBody, &queryResp)
 	if err != nil {

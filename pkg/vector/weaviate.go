@@ -46,8 +46,7 @@ func (c *WeaviateProvider) GetProviderType() string {
 func (d *WeaviateProvider) QueryEmbedding(
 	emb []float64,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(results []QueryResult, ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 class, vector
 	// 下面是一个例子
 	// {"query": "{ Get { Higress ( limit: 2 nearVector: { vector: [0.1, 0.2, 0.3] } ) { question _additional { distance } } } }"}
@@ -94,11 +93,11 @@ func (d *WeaviateProvider) QueryEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Weaviate] Query embedding response: %d, %s", statusCode, responseBody)
-			results, err := d.parseQueryResponse(responseBody, log)
+			results, err := d.parseQueryResponse(responseBody)
 			if err != nil {
 				err = fmt.Errorf("[Weaviate] Failed to parse query response: %v", err)
 			}
-			callback(results, ctx, log, err)
+			callback(results, ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -110,8 +109,7 @@ func (d *WeaviateProvider) UploadAnswerAndEmbedding(
 	queryEmb []float64,
 	queryAnswer string,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 class, vector 和 question 和 answer
 	// 下面是一个例子
 	// {"class": "Higress", "vector": [0.1, 0.2, 0.3], "properties": {"question": "这里是问题", "answer": "这里是答案"}}
@@ -135,7 +133,7 @@ func (d *WeaviateProvider) UploadAnswerAndEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[Weaviate] statusCode: %d, responseBody: %s", statusCode, string(responseBody))
-			callback(ctx, log, err)
+			callback(ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -156,7 +154,7 @@ type weaviateQueryRequest struct {
 	Query string `json:"query"`
 }
 
-func (d *WeaviateProvider) parseQueryResponse(responseBody []byte, log log.Log) ([]QueryResult, error) {
+func (d *WeaviateProvider) parseQueryResponse(responseBody []byte) ([]QueryResult, error) {
 	log.Infof("[Weaviate] queryResp: %s", string(responseBody))
 
 	if !gjson.GetBytes(responseBody, fmt.Sprintf("data.Get.%s.0._additional.distance", d.config.collectionID)).Exists() {

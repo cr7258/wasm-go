@@ -46,8 +46,7 @@ func (c *ESProvider) GetProviderType() string {
 func (d *ESProvider) QueryEmbedding(
 	emb []float64,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(results []QueryResult, ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(results []QueryResult, ctx wrapper.HttpContext, err error)) error {
 
 	requestBody, err := json.Marshal(esQueryRequest{
 		Source: Source{Excludes: []string{"embedding"}},
@@ -73,11 +72,11 @@ func (d *ESProvider) QueryEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[ES] Query embedding response: %d, %s", statusCode, responseBody)
-			results, err := d.parseQueryResponse(responseBody, log)
+			results, err := d.parseQueryResponse(responseBody)
 			if err != nil {
 				err = fmt.Errorf("[ES] Failed to parse query response: %v", err)
 			}
-			callback(results, ctx, log, err)
+			callback(results, ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -100,8 +99,7 @@ func (d *ESProvider) UploadAnswerAndEmbedding(
 	queryEmb []float64,
 	queryAnswer string,
 	ctx wrapper.HttpContext,
-	log log.Log,
-	callback func(ctx wrapper.HttpContext, log log.Log, err error)) error {
+	callback func(ctx wrapper.HttpContext, err error)) error {
 	// 最少需要填写的参数为 index, embeddings 和 question
 	// 下面是一个例子
 	// POST /<index>/_doc
@@ -132,7 +130,7 @@ func (d *ESProvider) UploadAnswerAndEmbedding(
 		requestBody,
 		func(statusCode int, responseHeaders http.Header, responseBody []byte) {
 			log.Debugf("[ES] statusCode:%d, responseBody:%s", statusCode, string(responseBody))
-			callback(ctx, log, err)
+			callback(ctx, err)
 		},
 		d.config.timeout,
 	)
@@ -177,7 +175,7 @@ type esQueryResponse struct {
 	} `json:"hits"`
 }
 
-func (d *ESProvider) parseQueryResponse(responseBody []byte, log log.Log) ([]QueryResult, error) {
+func (d *ESProvider) parseQueryResponse(responseBody []byte) ([]QueryResult, error) {
 	log.Infof("[ES] responseBody: %s", string(responseBody))
 	var queryResp esQueryResponse
 	err := json.Unmarshal(responseBody, &queryResp)
